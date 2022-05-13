@@ -1,6 +1,202 @@
 package hcm
 
-import "time"
+import (
+	"bytes"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
+	"reflect"
+	"time"
+
+	"github.com/tidwall/gjson"
+)
+
+const (
+	SCHEMA = "https" // or "http"
+	HOST   = "192.204.1.91"
+	PORT   = 23451 // or 23450
+)
+
+// var (
+// 	SN       string
+// 	UserName string
+// 	Password string
+// )
+
+func EncodeCredentials(username string, password string) string {
+	return base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
+}
+
+func GenerateToken(deviceID, username, password string) (string, int) {
+	basicURL := URL(deviceID)
+	URL := basicURL + "/sessions/"
+
+	client := &http.Client{}
+	reqest, err := http.NewRequest("POST", URL, nil)
+	if err != nil {
+		panic(err)
+	}
+	reqest.Header.Add("Accept", "application/json")
+	reqest.Header.Add("Content-Type", "application/json")
+	reqest.Header.Add("Authorization", "Basic "+EncodeCredentials(username, password))
+
+	response, err := client.Do(reqest)
+	if err != nil {
+		log.Printf("Generate Token error: %v\n", err)
+	}
+	body, _ := ioutil.ReadAll(response.Body)
+
+	Token := gjson.Get(string(body), "token").String()
+	SessionID := gjson.Get(string(body), "sessionId")
+	return Token, SessionID
+}
+
+func URL(deviceID string) string {
+	return SCHEMA + "://" + HOST + ":" + fmt.Sprintf("%d", PORT) + "/v1/objects/storages/" + deviceID
+}
+
+type Session struct {
+	SessionID        int       `json:"sessionId"`
+	UserID           string    `json:"userId"`
+	IPAddress        string    `json:"ipAddress"`
+	CreatedTime      time.Time `json:"createdTime"`
+	LastAccessedTime time.Time `json:"lastAccessedTime"`
+	http             http.Client
+	DeviceID         string
+	Token            string
+}
+
+func NewSession(deviceID, username, password string) (*Session, error) {
+	if deviceID == "" || username == "" || password == "" {
+		return nil, errors.New("deviceID,username and password cannot be empty")
+	}
+
+	token, sessionId := GenerateToken(deviceID, username, password)
+	session := &Session{
+		DeviceID:  deviceID,
+		Token:     token,
+		SessionID: sessionId,
+	}
+
+	return session, nil
+}
+
+func GetAllStorages() []StorageSystem {
+	var storages []StorageSystem
+	url := URL("")
+	client := &http.Client{}
+	reqest, _ := http.NewRequest("GET", url, nil)
+
+	response, _ := client.Do(reqest)
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Printf("获取存储列表失败: %v\n", err)
+		os.Exit(1)
+	}
+
+	for _, strStorage := range gjson.Get(string(body), "data").Array() {
+		storage := StorageSystem{}
+		json.Unmarshal([]byte(strStorage.String()), &storage)
+		storages = append(storages, storage)
+	}
+	return storages
+}
+
+func GetDeviceIDBySN(sn int) string {
+	var deviceID string
+	storages := GetAllStorages()
+	for _, storage := range storages {
+		if storage.SerialNumber == sn {
+			deviceID = storage.StorageDeviceID
+		}
+	}
+	return deviceID
+}
+
+func (session *Session) Request(method string, URI string, Parameters, body, resp interface{}) error {
+	if method == "" || URI == "" || resp == nil {
+		return errors.New("Missing method, URI or response interface")
+	}
+
+	endpoint := URL(session.DeviceID) + URI
+
+	// create a http Request pointer
+	var req *http.Request
+
+	if body != nil {
+		// Parse out body struct into JSON
+		bodyBytes, _ := json.Marshal(body)
+
+		// Create a new request
+		req, _ = http.NewRequest(method, endpoint, bytes.NewBuffer(bodyBytes))
+	} else {
+		// Create a new request
+		req, _ = http.NewRequest(method, endpoint, nil)
+	}
+	// Add the mandatory headers to the request
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "session "+session.Token)
+
+	if method != "DELETE" {
+		// Create an URI query object
+		a := req.URL.Query()
+
+		// Add the query parameters to the URI query object
+		t := reflect.TypeOf(Parameters)
+		v := reflect.ValueOf(Parameters)
+		for i := 0; i < t.NumField(); i++ {
+			fmt.Println(t.Field(i).Name, fmt.Sprintf("%v", v.Field(i).Interface()))
+			a.Add(t.Field(i).Name, fmt.Sprintf("%v", v.Field(i).Interface()))
+		}
+	}
+
+	// Perform request
+	httpResp, err := session.http.Do(req)
+	if err != nil {
+		return err
+	}
+
+	// Cleanup Response
+	defer httpResp.Body.Close()
+
+	switch httpResp.StatusCode {
+	case 200, 201, 202:
+		// Decode JSON of response into our interface defined for the specific request sent
+		body, err := ioutil.ReadAll(httpResp.Body)
+		if err != nil {
+			return err
+		}
+
+		// Unmarshal the body into a struct
+		bodyByte := json.Unmarshal(body, resp)
+
+		return bodyByte
+	case 204:
+		return nil
+
+	case 422:
+		return fmt.Errorf("HTTP status codes: %d, detail: %v", httpResp.StatusCode, httpResp.Body)
+
+	default:
+		return fmt.Errorf("HTTP status codes: %d", httpResp.StatusCode)
+	}
+}
+
+//CloseSession purpose is to end the session。
+func (session *Session) CloseSession() (err error) {
+	err = session.Request("DELETE", "/sessions/"+fmt.Sprintf("%d", session.SessionID), "", "", false, nil, nil)
+	return err
+}
+
+// func (session *Session) CloseSession() (err error) {
+
+// }
 
 type StorageSystem struct {
 	StorageDeviceID        string `json:"storageDeviceId"`
@@ -19,14 +215,6 @@ type StorageSystem struct {
 	LanConnectionProtocol string `json:"lanConnectionProtocol"`
 	TargetCtl             string `json:"targetCtl"`
 	UsesSvp               bool   `json:"usesSvp"`
-}
-
-type Session struct {
-	SessionID        int       `json:"sessionId"`
-	UserID           string    `json:"userId"`
-	IPAddress        string    `json:"ipAddress"`
-	CreatedTime      time.Time `json:"createdTime"`
-	LastAccessedTime time.Time `json:"lastAccessedTime"`
 }
 
 type Job struct {
