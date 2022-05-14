@@ -82,10 +82,16 @@ type ThinImagePool struct {
 }
 
 func GetPools(session *Session, poolType, detailInfoType string) {
-	Parameters := map[string]string{
-		"poolType":       poolType,
-		"detailInfoType": detailInfoType,
+	var Parameters = map[string]string{}
+
+	if poolType != "" {
+		Parameters["poolType"] = poolType
 	}
+
+	if detailInfoType != "" {
+		Parameters["detailInfoType"] = detailInfoType
+	}
+
 	err := session.Request("GET", "/pools", Parameters, nil, nil)
 	if err != nil {
 		log.Printf("GetPools Error:%v\n", err)
