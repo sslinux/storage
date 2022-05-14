@@ -1,6 +1,7 @@
 package hcm
 
 import (
+	"fmt"
 	"log"
 )
 
@@ -88,5 +89,6 @@ func GetDPPool(session *Session) {
 	err := session.Request("GET", "/pools", Parameters, nil, nil)
 	if err != nil {
 		log.Printf("Get DP Pool Error:%v\n", err)
+		fmt.Println(err)
 	}
 }
