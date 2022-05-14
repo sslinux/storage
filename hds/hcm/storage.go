@@ -29,6 +29,7 @@ const (
 // 	Password string
 // )
 
+// 默认忽略https证书；
 var tr = &http.Transport{
 	TLSClientConfig: &tls.Config{
 		InsecureSkipVerify: true,
