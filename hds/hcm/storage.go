@@ -11,7 +11,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"reflect"
 	"time"
 
 	"github.com/tidwall/gjson"
@@ -128,7 +127,7 @@ func GetDeviceIDBySN(sn int) string {
 	return deviceID
 }
 
-func (session *Session) Request(method string, URI string, Parameters, body, resp interface{}) error {
+func (session *Session) Request(method string, URI string, Parameters map[string]string, body, resp interface{}) error {
 	if method == "" || URI == "" {
 		return errors.New("missing Method or URI")
 	}
@@ -148,6 +147,7 @@ func (session *Session) Request(method string, URI string, Parameters, body, res
 		// Create a new request
 		req, _ = http.NewRequest(method, endpoint, nil)
 	}
+
 	// Add the mandatory headers to the request
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
@@ -156,14 +156,10 @@ func (session *Session) Request(method string, URI string, Parameters, body, res
 	if method != "DELETE" {
 		// Create an URI query object
 		a := req.URL.Query()
-
-		// Add the query parameters to the URI query object
-		t := reflect.TypeOf(Parameters)
-		v := reflect.ValueOf(Parameters)
-		for i := 0; i < t.NumField(); i++ {
-			fmt.Println(t.Field(i).Name, fmt.Sprintf("%v", v.Field(i).Interface()))
-			a.Add(t.Field(i).Name, fmt.Sprintf("%v", v.Field(i).Interface()))
+		for k, v := range Parameters {
+			a.Add(k, v)
 		}
+		req.URL.RawQuery = a.Encode()
 	}
 
 	// Perform request
