@@ -89,6 +89,7 @@ func NewSession(deviceID, username, password string) (*Session, error) {
 func GetAllStorages() []StorageSystem {
 	var storages []StorageSystem
 	url := URL("")
+	log.Printf("GetAllStorages:%s\n", url)
 	client := &http.Client{}
 	reqest, _ := http.NewRequest("GET", url, nil)
 
@@ -124,7 +125,7 @@ func (session *Session) Request(method string, URI string, Parameters, body, res
 	}
 
 	endpoint := URL(session.DeviceID) + URI
-
+	log.Printf("session Request endpoint:%s\n", endpoint)
 	// create a http Request pointer
 	var req *http.Request
 
