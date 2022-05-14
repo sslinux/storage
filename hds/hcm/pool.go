@@ -81,10 +81,10 @@ type ThinImagePool struct {
 	PoolType                  string `json:"poolType"`
 }
 
-func GetDPPool(session *Session) {
+func GetPools(session *Session, poolType, detailInfoType string) {
 	Parameters := map[string]string{
-		"poolType":       "DP",
-		"detailInfoType": "FMC",
+		"poolType":       poolType,
+		"detailInfoType": detailInfoType,
 	}
 	err := session.Request("GET", "/pools", Parameters, nil, nil)
 	if err != nil {
