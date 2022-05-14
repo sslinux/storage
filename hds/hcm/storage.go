@@ -57,7 +57,7 @@ func GenerateToken(deviceID, username, password string) (string, int64) {
 }
 
 func URL(deviceID string) string {
-	return SCHEMA + "://" + HOST + ":" + fmt.Sprintf("%d", PORT) + "/v1/objects/storages/" + deviceID
+	return SCHEMA + "://" + HOST + ":" + fmt.Sprintf("%d", PORT) + "/ConfigurationManager/v1/objects/storages/" + deviceID
 }
 
 type Session struct {
