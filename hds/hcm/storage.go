@@ -2,6 +2,7 @@ package hcm
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -28,6 +29,12 @@ const (
 // 	Password string
 // )
 
+var tr = &http.Transport{
+	TLSClientConfig: &tls.Config{
+		InsecureSkipVerify: true,
+	},
+}
+
 func EncodeCredentials(username string, password string) string {
 	return base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
 }
@@ -36,7 +43,7 @@ func GenerateToken(deviceID, username, password string) (string, int64) {
 	basicURL := URL(deviceID)
 	URL := basicURL + "/sessions/"
 
-	client := &http.Client{}
+	client := &http.Client{Transport: tr}
 	reqest, err := http.NewRequest("POST", URL, nil)
 	if err != nil {
 		panic(err)
@@ -90,7 +97,8 @@ func GetAllStorages() []StorageSystem {
 	var storages []StorageSystem
 	url := URL("")
 	log.Printf("GetAllStorages:%s\n", url)
-	client := &http.Client{}
+
+	client := &http.Client{Transport: tr}
 	reqest, _ := http.NewRequest("GET", url, nil)
 
 	response, _ := client.Do(reqest)
