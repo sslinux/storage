@@ -129,8 +129,8 @@ func GetDeviceIDBySN(sn int) string {
 }
 
 func (session *Session) Request(method string, URI string, Parameters, body, resp interface{}) error {
-	if method == "" || URI == "" || resp == nil {
-		return errors.New("Missing method, URI or response interface")
+	if method == "" || URI == "" {
+		return errors.New("missing Method or URI")
 	}
 
 	endpoint := URL(session.DeviceID) + URI
