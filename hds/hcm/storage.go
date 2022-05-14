@@ -32,7 +32,7 @@ func EncodeCredentials(username string, password string) string {
 	return base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
 }
 
-func GenerateToken(deviceID, username, password string) (string, int) {
+func GenerateToken(deviceID, username, password string) (string, int64) {
 	basicURL := URL(deviceID)
 	URL := basicURL + "/sessions/"
 
@@ -52,7 +52,7 @@ func GenerateToken(deviceID, username, password string) (string, int) {
 	body, _ := ioutil.ReadAll(response.Body)
 
 	Token := gjson.Get(string(body), "token").String()
-	SessionID := gjson.Get(string(body), "sessionId")
+	SessionID := gjson.Get(string(body), "sessionId").Int()
 	return Token, SessionID
 }
 
@@ -61,7 +61,7 @@ func URL(deviceID string) string {
 }
 
 type Session struct {
-	SessionID        int       `json:"sessionId"`
+	SessionID        int64     `json:"sessionId"`
 	UserID           string    `json:"userId"`
 	IPAddress        string    `json:"ipAddress"`
 	CreatedTime      time.Time `json:"createdTime"`
@@ -190,7 +190,7 @@ func (session *Session) Request(method string, URI string, Parameters, body, res
 
 //CloseSession purpose is to end the session。
 func (session *Session) CloseSession() (err error) {
-	err = session.Request("DELETE", "/sessions/"+fmt.Sprintf("%d", session.SessionID), "", "", false, nil, nil)
+	err = session.Request("DELETE", "/sessions/"+fmt.Sprintf("%d", session.SessionID), nil, nil, nil)
 	return err
 }
 
