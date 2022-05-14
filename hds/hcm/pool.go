@@ -88,7 +88,7 @@ func GetPools(session *Session, poolType, detailInfoType string) {
 	}
 	err := session.Request("GET", "/pools", Parameters, nil, nil)
 	if err != nil {
-		log.Printf("Get DP Pool Error:%v\n", err)
+		log.Printf("GetPools Error:%v\n", err)
 		fmt.Println(err)
 	}
 }

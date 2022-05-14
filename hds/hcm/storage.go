@@ -153,14 +153,12 @@ func (session *Session) Request(method string, URI string, Parameters map[string
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "session "+session.Token)
 
-	if method != "DELETE" {
-		// Create an URI query object
-		a := req.URL.Query()
-		for k, v := range Parameters {
-			a.Add(k, v)
-		}
-		req.URL.RawQuery = a.Encode()
+	// Create an URI query object
+	a := req.URL.Query()
+	for k, v := range Parameters {
+		a.Add(k, v)
 	}
+	req.URL.RawQuery = a.Encode()
 
 	// Perform request
 	httpResp, err := session.http.Do(req)
