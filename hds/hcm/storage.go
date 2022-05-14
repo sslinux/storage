@@ -17,9 +17,9 @@ import (
 )
 
 const (
-	SCHEMA = "https" // or "http"
+	SCHEMA = "http" // or "http"
 	HOST   = "192.204.1.91"
-	PORT   = 23451 // or 23450
+	PORT   = 23450 // or 23450
 )
 
 // var (
@@ -51,6 +51,7 @@ func GenerateToken(deviceID, username, password string) (string, int64) {
 	reqest.Header.Add("Accept", "application/json")
 	reqest.Header.Add("Content-Type", "application/json")
 	reqest.Header.Add("Authorization", "Basic "+EncodeCredentials(username, password))
+	// reqest.Header.Add("Authorization", "Basic aGlhYTpQQHNzdzByZA==")
 
 	response, err := client.Do(reqest)
 	if err != nil {
@@ -116,20 +117,20 @@ func GetAllStorages() []StorageSystem {
 	return storages
 }
 
-func GetDeviceIDBySN(sn int) string {
-	var deviceID string
+func GetDeviceIDBySN(sn int64) StorageSystem {
+	var targetStorage StorageSystem
 	storages := GetAllStorages()
 	for _, storage := range storages {
 		if storage.SerialNumber == sn {
-			deviceID = storage.StorageDeviceID
+			targetStorage = storage
 		}
 	}
-	return deviceID
+	return targetStorage
 }
 
-func (session *Session) Request(method string, URI string, Parameters map[string]string, body, resp interface{}) error {
+func (session *Session) Request(method string, URI string, Parameters map[string]string, body, resp interface{}) (*http.Response, error) {
 	if method == "" || URI == "" {
-		return errors.New("missing Method or URI")
+		return nil, errors.New("missing Method or URI")
 	}
 
 	endpoint := URL(session.DeviceID) + URI
@@ -154,67 +155,64 @@ func (session *Session) Request(method string, URI string, Parameters map[string
 	req.Header.Set("Authorization", "session "+session.Token)
 
 	// Create an URI query object
-	a := req.URL.Query()
-	for k, v := range Parameters {
-		a.Add(k, v)
+	if len(Parameters) > 0 {
+		a := req.URL.Query()
+		for k, v := range Parameters {
+			a.Add(k, v)
+		}
+		req.URL.RawQuery = a.Encode()
 	}
-	req.URL.RawQuery = a.Encode()
 
 	// Perform request
 	httpResp, err := session.http.Do(req)
 	if err != nil {
-		return err
+		return httpResp, err
 	}
 
 	// Cleanup Response
-	defer httpResp.Body.Close()
+	// defer httpResp.Body.Close()
 
-	switch httpResp.StatusCode {
-	case 200, 201, 202:
-		// Decode JSON of response into our interface defined for the specific request sent
-		body, err := ioutil.ReadAll(httpResp.Body)
-		if err != nil {
-			return err
-		}
+	// switch httpResp.StatusCode {
+	// case 200, 201, 202:
+	// 	// Decode JSON of response into our interface defined for the specific request sent
+	// 	body, err := ioutil.ReadAll(httpResp.Body)
+	// 	if err != nil {
+	// 		return httpResp, err
+	// 	}
+	// 	// fmt.Println(string(body))
 
-		// Unmarshal the body into a struct
-		bodyByte := json.Unmarshal(body, resp)
+	// 	// Unmarshal the body into a struct
+	// 	err = json.Unmarshal(body, resp)
+	// 	if err != nil {
+	// 		fmt.Println(err)
+	// 	}
 
-		return bodyByte
-	case 204:
-		return nil
+	// 	return httpResp, nil
+	// case 204:
+	// 	return httpResp, nil
 
-	case 422:
-		return fmt.Errorf("HTTP status codes: %d, detail: %v", httpResp.StatusCode, httpResp.Body)
+	// case 422:
+	// 	return nil, fmt.Errorf("HTTP status codes: %d, detail: %v", httpResp.StatusCode, httpResp.Body)
 
-	default:
-		return fmt.Errorf("HTTP status codes: %d", httpResp.StatusCode)
-	}
+	// default:
+	// 	return nil, fmt.Errorf("HTTP status codes: %d", httpResp.StatusCode)
+	// }
+
+	return httpResp, nil
 }
 
 //CloseSession purpose is to end the session。
 func (session *Session) CloseSession() (err error) {
-	err = session.Request("DELETE", "/sessions/"+fmt.Sprintf("%d", session.SessionID), nil, nil, nil)
+	_, err = session.Request("DELETE", "/sessions/"+fmt.Sprintf("%d", session.SessionID), nil, nil, nil)
+	// fmt.Println(body)
 	return err
 }
 
 type StorageSystem struct {
-	StorageDeviceID        string `json:"storageDeviceId"`
-	Model                  string `json:"model"`
-	SerialNumber           int    `json:"serialNumber"`
-	SvpIP                  string `json:"svpIp"`
-	MappWebServerHTTPSPort int    `json:"mappWebServerHttpsPort"`
-	RmiPort                int    `json:"rmiPort"`
-	Ctl1IP                 string `json:"ctl1Ip"`
-	Ctl2IP                 string `json:"ctl2Ip"`
-	DkcMicroVersion        string `json:"dkcMicroVersion"`
-	CommunicationModes     []struct {
-		CommunicationMode string `json:"communicationMode"`
-	} `json:"communicationModes"`
-	IsSecure              bool   `json:"isSecure"`
-	LanConnectionProtocol string `json:"lanConnectionProtocol"`
-	TargetCtl             string `json:"targetCtl"`
-	UsesSvp               bool   `json:"usesSvp"`
+	StorageDeviceID string `json:"storageDeviceId"`
+	Model           string `json:"model"`
+	SerialNumber    int64  `json:"serialNumber"`
+	SvpIP           string `json:"svpIp"`
 }
 
 type Job struct {
