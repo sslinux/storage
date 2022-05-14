@@ -87,6 +87,6 @@ func GetDPPool(session *Session) {
 	}
 	err := session.Request("GET", "/pools", Parameters, nil, nil)
 	if err != nil {
-		log.Println("Get DP Pool Error.")
+		log.Printf("Get DP Pool Error:%v\n", err)
 	}
 }
