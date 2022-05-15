@@ -35,6 +35,7 @@ type DPPool struct {
 	UsedPhysicalCapacityRate        int64  `json:"usedPhysicalCapacityRate"`
 	AvailablePhysicalVolumeCapacity int64  `json:"availablePhysicalVolumeCapacity"`
 	TotalPhysicalCapacity           int64  `json:"totalPhysicalCapacity"`
+	UsedPhysicalCapacity            int64  `json:"usedPhysicalCapacity"`
 	DepletionThreshold              int64  `json:"depletionThreshold"`
 	LocatedVolumeCount              int64  `json:"locatedVolumeCount"`
 	TotalLocatedCapacity            int64  `json:"totalLocatedCapacity"`
