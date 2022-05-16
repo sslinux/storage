@@ -134,7 +134,7 @@ func (session *Session) Request(method string, URI string, Parameters map[string
 	if err != nil {
 		return httpResp, err
 	}
-	httpResp.Body.Close()
+	// defer httpResp.Body.Close()
 
 	return httpResp, nil
 }

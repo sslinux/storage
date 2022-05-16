@@ -14,10 +14,10 @@ type Pool struct {
 	gorm.Model
 	SN                        int64
 	PoolID                    int64  `json:"poolId"`
+	PoolName                  string `json:"poolName"`
 	PoolStatus                string `json:"poolStatus"`
 	UsedCapacityRate          int64  `json:"usedCapacityRate"`
 	SnapshotCount             int64  `json:"snapshotCount"`
-	PoolName                  string `json:"poolName"`
 	AvailableVolumeCapacity   int64  `json:"availableVolumeCapacity"`
 	TotalPoolCapacity         int64  `json:"totalPoolCapacity"`
 	NumOfLdevs                int64  `json:"numOfLdevs"`
@@ -32,16 +32,18 @@ type Pool struct {
 
 type DPPool struct {
 	Pool
-	UsedPhysicalCapacityRate        int64  `json:"usedPhysicalCapacityRate"`
-	AvailablePhysicalVolumeCapacity int64  `json:"availablePhysicalVolumeCapacity"`
-	TotalPhysicalCapacity           int64  `json:"totalPhysicalCapacity"`
-	UsedPhysicalCapacity            int64  `json:"usedPhysicalCapacity"`
-	DepletionThreshold              int64  `json:"depletionThreshold"`
-	LocatedVolumeCount              int64  `json:"locatedVolumeCount"`
-	TotalLocatedCapacity            int64  `json:"totalLocatedCapacity"`
-	BlockingMode                    string `json:"blockingMode"`
-	TotalReservedCapacity           int64  `json:"totalReservedCapacity"`
-	ReservedVolumeCount             int64  `json:"reservedVolumeCount"`
+	TotalPhysicalCapacity           int64 `json:"totalPhysicalCapacity"`
+	UsedPhysicalCapacity            int64 `json:"usedPhysicalCapacity"`
+	UsedPhysicalCapacityRate        int64 `json:"usedPhysicalCapacityRate"`
+	AvailablePhysicalVolumeCapacity int64 `json:"availablePhysicalVolumeCapacity"`
+	DepletionThreshold              int64 `json:"depletionThreshold"`
+	LocatedVolumeCount              int64 `json:"locatedVolumeCount"`
+	TotalLocatedCapacity            int64 `json:"totalLocatedCapacity"`
+	// TotalLocatedRate                float64
+	UsedLocatedCapacityRate float64 `json:"usedLocatedCapacityRate"`
+	BlockingMode            string  `json:"blockingMode"`
+	TotalReservedCapacity   int64   `json:"totalReservedCapacity"`
+	ReservedVolumeCount     int64   `json:"reservedVolumeCount"`
 	// DuplicationLdevIds                  []int64 `json:"duplicationLdevIds"`
 	DuplicationNumber                   int64 `json:"duplicationNumber"`
 	DataReductionAccelerateCompCapacity int64 `json:"dataReductionAccelerateCompCapacity"`
@@ -81,6 +83,18 @@ type ThinImagePool struct {
 	Pool
 }
 
+func (dppool *DPPool) MB2TB() {
+	dppool.TotalPhysicalCapacity = dppool.TotalPhysicalCapacity / 1024 / 1024
+	dppool.UsedPhysicalCapacity = dppool.UsedPhysicalCapacity / 1024 / 1024
+	dppool.AvailablePhysicalVolumeCapacity = dppool.AvailablePhysicalVolumeCapacity / 1024 / 1024
+	dppool.TotalPoolCapacity = dppool.TotalPoolCapacity / 1024 / 1024
+	dppool.AvailableVolumeCapacity = dppool.AvailableVolumeCapacity / 1024 / 1024
+	dppool.TotalLocatedCapacity = dppool.TotalLocatedCapacity / 1024 / 1024
+	// dppool.TotalLocatedRate = float64(dppool.TotalLocatedCapacity) / float64(dppool.TotalPoolCapacity) * 100
+
+	// dppool.UsedVirtualVolumeCapacity = dppool.UsedVirtualVolumeCapacity / 1024 / 1024
+}
+
 func GetPools(session *Session, poolType, detailInfoType string) interface{} {
 	var Parameters = map[string]string{}
 
@@ -93,11 +107,14 @@ func GetPools(session *Session, poolType, detailInfoType string) interface{} {
 	}
 
 	resp, err := session.Request("GET", "/pools", Parameters, nil, nil)
+
 	if err != nil {
 		log.Printf("GetPools Error:%v\n", err)
 		fmt.Println(err)
 	}
 	byteBody, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+
 	if err != nil {
 		log.Printf("read response body error:%s\n", err)
 	}
