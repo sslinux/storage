@@ -10,14 +10,18 @@ import (
 )
 
 type HostGroup struct {
-	HostGroupID     string `json:"hostGroupId"`
-	PortID          string `json:"portId"`
-	HostGroupNumber int    `json:"hostGroupNumber"`
-	HostGroupName   string `json:"hostGroupName"`
-	HostMode        string `json:"hostMode"`
-	HostModeOptions []int  `json:"hostModeOptions"`
-	ResourceGroupID int    `json:"resourceGroupId"`
-	IsDefined       bool   `json:"isDefined"`
+	HostGroupID     string   `json:"hostGroupId"`
+	PortID          string   `json:"portId"`
+	HostGroupNumber int      `json:"hostGroupNumber"`
+	HostGroupName   string   `json:"hostGroupName"`
+	HostMode        string   `json:"hostMode"`
+	HostModeOptions []int    `json:"hostModeOptions"`
+	ResourceGroupID int      `json:"resourceGroupId"`
+	IsDefined       bool     `json:"isDefined"`
+	NumOfLun        int      `json:"numOfLun"`
+	Luns            []LUN    `json:"luns"`
+	NumOfHost       int      `json:"numOfHost"`
+	HostWWNs        []string `json:"hosts"`
 }
 
 func GetAllHostgroups(session *Session) []HostGroup {
@@ -38,7 +42,7 @@ func GetAllHostgroups(session *Session) []HostGroup {
 func (hostgroup *HostGroup) GetHostgroupDetail(session *Session) {
 	Parameters := map[string]string{}
 	Parameters["detailInfoType"] = "resourceGroup"
-	resp, err := session.Request("GET", "/host-groups"+hostgroup.HostGroupID, Parameters, nil, nil)
+	resp, err := session.Request("GET", "/host-groups/"+hostgroup.HostGroupID, Parameters, nil, nil)
 	if err != nil {
 		log.Printf("GetHostgroupDetail error:%s\n", err)
 	}
@@ -64,11 +68,24 @@ func (hostgroup *HostGroup) GetHostgroupLuns(session *Session) []LUN {
 		json.Unmarshal([]byte(item.String()), &lun)
 		luns = append(luns, lun)
 	}
+	hostgroup.Luns = luns
+	hostgroup.NumOfLun = len(luns)
 	return luns
 }
 
 func (hostgroup *HostGroup) GetHostgroupHosts(session *Session) {
-
+	Parameters := map[string]string{}
+	Parameters["portId"] = hostgroup.PortID
+	Parameters["hostGroupNumber"] = fmt.Sprintf("%d", hostgroup.HostGroupNumber)
+	resp, err := session.Request("GET", "/host-wwns", Parameters, nil, nil)
+	if err != nil {
+		log.Printf("GetHostgroupHosts error:%s\n", err)
+	}
+	byteBody, _ := ioutil.ReadAll(resp.Body)
+	for _, tmpHost := range gjson.Get(string(byteBody), "data").Array() {
+		hostgroup.HostWWNs = append(hostgroup.HostWWNs, gjson.Get(tmpHost.String(), "hostWwn").String())
+	}
+	hostgroup.NumOfHost = len(hostgroup.HostWWNs)
 }
 
 type ISCSITarget struct {
