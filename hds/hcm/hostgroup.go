@@ -128,3 +128,75 @@ type HostISCSI struct {
 	IscsiName       string `json:"iscsiName"`
 	IscsiNickname   string `json:"iscsiNickname"`
 }
+
+func SetNickName(session *Session, portId, hostWwn, nickname string, hostGroupNumber int) {
+	if nickname == "" {
+		log.Printf("别名为空，表示删除该wwn号的别名.")
+	}
+	reqBody := map[string]string{}
+	reqBody["wwnNickname"] = nickname
+	// byteReqBody, _ := json.Marshal(reqBody)
+
+	resp, err := session.Request("PUT", "/host-wwns/"+portId+","+fmt.Sprintf("%d", hostGroupNumber)+","+hostWwn, nil, reqBody, nil)
+	if err != nil {
+		log.Printf("Set Nickname error:%s\n", err)
+		return
+	}
+	if resp.StatusCode == 200 || resp.StatusCode == 201 || resp.StatusCode == 202 {
+		log.Printf("别名设置成功: %s\n", nickname)
+	} else {
+		byteBody, _ := ioutil.ReadAll(resp.Body)
+		fmt.Println(string(byteBody))
+		fmt.Println(resp.StatusCode)
+	}
+}
+
+func GetAllHostWWNs(session *Session, portID string) ([]HostWWN, error) {
+	Parameters := map[string]string{}
+	Parameters["portId"] = portID
+	resp, err := session.Request("GET", "/host-wwns", Parameters, nil, nil)
+	if err != nil {
+		log.Printf("GetHostWWNs error:%s\n", err)
+		return nil, err
+	}
+	byteBody, _ := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+
+	hosts := make([]HostWWN, 20)
+	for _, item := range gjson.Get(string(byteBody), "data").Array() {
+		host := HostWWN{}
+		json.Unmarshal([]byte(item.String()), &host)
+		hosts = append(hosts, host)
+	}
+	return hosts, nil
+}
+
+func GetSpecificHostWWN(session *Session, portId, hostGroupNumber, hostWwn string) (HostWWN, error) {
+	resp, err := session.Request("GET", "/host-wwns/"+portId+","+hostGroupNumber+","+hostWwn, nil, nil, nil)
+	if err != nil {
+		log.Printf("Get Specific Host WWN error:%s\n", err)
+		return HostWWN{}, err
+	}
+	byteBody, _ := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+	host := HostWWN{}
+	json.Unmarshal(byteBody, &host)
+	return host, nil
+}
+
+func RegisterWWNIntoHostgroup(session *Session, portId, hostWwn string, hostGroupNumber int) {
+	resp, err := session.Request("POST", "/host-wwns/"+portId+","+fmt.Sprintf("%d", hostGroupNumber)+","+hostWwn, nil, nil, nil)
+	if err != nil {
+		log.Printf("Register WWN into Hostgroup error:%s\n", err)
+		return
+	}
+	// byteBody, _ := ioutil.ReadAll(resp.Body)
+	// defer resp.Body.Close()
+	// hostwwn := HostWWN{}
+	// json.Unmarshal(byteBody, &hostwwn)
+	if resp.StatusCode != 200 {
+		log.Printf("添加WWN:%s 到主机组:%s 失败;\n", hostWwn, portId+","+fmt.Sprintf("%d", hostGroupNumber))
+		return
+	}
+	log.Printf("Register %s into %s success;\n", hostWwn, portId+","+fmt.Sprintf("%d", hostGroupNumber))
+}
