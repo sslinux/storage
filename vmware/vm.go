@@ -7,20 +7,35 @@ import (
 	"github.com/vmware/govmomi/view"
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/mo"
+	"gorm.io/gorm"
 )
 
 type TargetVM struct {
-	Group         string   `json:"group"`
-	VMID          string   `json:"vmid"`
-	VMName        string   `json:"name"`
-	VMIP          string   `json:"ip"`
-	DatastoreName []string `json:"datastoreName"`
-	DataStoreID   []string `json:"datastoreID"`
-	HostID        string   `json:"hostId"`
-	HostIP        string   `json:"hostIP"`
+	gorm.Model
+	Group         string `json:"group"`
+	VMID          string `json:"vmid"`
+	VMName        string `json:"name"`
+	VMIP          string `json:"ip"`
+	DatastoreName string `json:"datastoreName"`
+	DataStoreID   string `json:"datastoreID"`
+	HostID        string `json:"hostId"`
+	HostIP        string `json:"hostIP"`
 }
 
-func GetAllVM(c *vim25.Client) {
+var AllHostIDMapName map[string]string
+var AllDataStoreIDMapName map[string]string
+
+func init() {
+	client := NewClient()
+	AllTargetHosts := GetAllHost(client)
+	AllHostIDMapName = GetHostIDMapName(AllTargetHosts)
+
+	AllTargetDatastores := GetAllDatastore(client)
+	AllDataStoreIDMapName = GetAllDatastoreIDMapName(AllTargetDatastores)
+}
+
+func GetAllVM(c *vim25.Client) []TargetVM {
+	var tvms []TargetVM
 	m := view.NewManager(c)
 	kind := []string{"VirtualMachine"}
 	v, err := m.CreateContainerView(ctx, c.ServiceContent.RootFolder, kind, true)
@@ -45,18 +60,17 @@ func GetAllVM(c *vim25.Client) {
 		tvm.Group = vm.Parent.Value
 		tvm.HostID = vm.Summary.Runtime.Host.Value
 		tvm.VMIP = vm.Summary.Guest.IpAddress
+		tvm.HostIP = AllHostIDMapName[tvm.HostID]
 		for _, d := range vm.Config.DatastoreUrl {
-			tvm.DatastoreName = append(tvm.DatastoreName, d.Name)
+			tvm.DatastoreName = d.Name
+			tvm.DataStoreID = AllDataStoreIDMapName[d.Name]
+			tvms = append(tvms, tvm)
 		}
-
-		tvm.DataStoreID = []string{"待补充"}
-		tvm.HostIP = "待增加取物理主机IP的方法"
-
-		fmt.Println(tvm)
 	}
 
 	// bytevm, _ := json.Marshal(vms[0])
 	// fmt.Println(string(bytevm))
 
 	// fmt.Println(vms)
+	return tvms
 }

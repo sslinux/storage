@@ -35,7 +35,7 @@ type ScsiLUN struct {
 	// LocalDisk     bool   `json:"localDisk"`
 }
 
-func GetAllHost(c *vim25.Client) {
+func GetAllHost(c *vim25.Client) []TargetHost {
 	m := view.NewManager(c)
 	kind := []string{"HostSystem"}
 	v, err := m.CreateContainerView(ctx, c.ServiceContent.RootFolder, kind, true)
@@ -50,13 +50,24 @@ func GetAllHost(c *vim25.Client) {
 		fmt.Println(err)
 	}
 
+	var thosts []TargetHost
 	for _, host := range hosts {
 		thost, err := GetHostInfo(&host)
 		if err != nil {
 			log.Printf("GetHostInfo error: %v", err)
 		}
-		fmt.Println(thost)
+		thosts = append(thosts, thost)
+		// fmt.Println(thost)
 	}
+	return thosts
+}
+
+func GetHostIDMapName(thosts []TargetHost) map[string]string {
+	hostIDMapName := make(map[string]string)
+	for _, thost := range thosts {
+		hostIDMapName[thost.HostID] = thost.Name
+	}
+	return hostIDMapName
 }
 
 func GetHostInfo(host *mo.HostSystem) (TargetHost, error) {

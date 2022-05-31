@@ -22,6 +22,14 @@ type TargetDatastore struct {
 	Vms          []string
 }
 
+func GetAllDatastoreIDMapName(allDatastore []TargetDatastore) map[string]string {
+	allDatastoreMap := make(map[string]string)
+	for _, store := range allDatastore {
+		allDatastoreMap[store.Name] = store.DiskName
+	}
+	return allDatastoreMap
+}
+
 func GetAllDatastore(c *vim25.Client) []TargetDatastore {
 	m := view.NewManager(c)
 	kind := []string{"Datastore"}
