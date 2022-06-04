@@ -18,6 +18,7 @@ type Port struct {
 	LoopID             string   `json:"loopId"`
 	FabricMode         bool     `json:"fabricMode"`
 	LunSecuritySetting bool     `json:"lunSecuritySetting"`
+	WWN                string   `json:"wwn"`
 }
 
 //判断slice中是否存在某个item

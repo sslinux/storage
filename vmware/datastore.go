@@ -18,6 +18,8 @@ type TargetDatastore struct {
 	BlockSize    int64  `json:"BlockSize"`
 	Uuid         string `json:"Uuid"`
 	DiskName     string `json:"DiskName"`
+	NumOfHost    int    `json:"NumOfHost"`
+	NumOfVM      int    `json:"NumOfVM"`
 	Hosts        []string
 	Vms          []string
 }
@@ -72,11 +74,14 @@ func GetAllDatastore(c *vim25.Client) []TargetDatastore {
 			targetDatastore.Hosts = append(targetDatastore.Hosts, h.Key.Value)
 			// fmt.Printf("%s\t", h.Key.Value)
 		}
+		targetDatastore.NumOfHost = len(targetDatastore.Hosts)
 		// fmt.Println()
+
 		for _, v := range store.Vm {
 			targetDatastore.Vms = append(targetDatastore.Vms, v.Value)
 			// fmt.Printf("%s\t", v.Value)
 		}
+		targetDatastore.NumOfVM = len(targetDatastore.Vms)
 		// byteStore, _ := json.Marshal(store)
 		// fmt.Println(string(byteStore))
 		// fmt.Println()

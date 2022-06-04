@@ -25,16 +25,13 @@ type TargetVM struct {
 var AllHostIDMapName map[string]string
 var AllDataStoreIDMapName map[string]string
 
-func init() {
-	client := NewClient()
-	AllTargetHosts := GetAllHost(client)
+func GetAllVM(c *vim25.Client) []TargetVM {
+	AllTargetHosts := GetAllHost(c)
 	AllHostIDMapName = GetHostIDMapName(AllTargetHosts)
 
-	AllTargetDatastores := GetAllDatastore(client)
+	AllTargetDatastores := GetAllDatastore(c)
 	AllDataStoreIDMapName = GetAllDatastoreIDMapName(AllTargetDatastores)
-}
 
-func GetAllVM(c *vim25.Client) []TargetVM {
 	var tvms []TargetVM
 	m := view.NewManager(c)
 	kind := []string{"VirtualMachine"}

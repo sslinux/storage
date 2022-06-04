@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"strings"
 
 	"github.com/tidwall/gjson"
 	"github.com/vmware/govmomi/view"
@@ -32,7 +31,9 @@ type ScsiLUN struct {
 	CanonicalName string `json:"canonicalName"`
 	Vender        string `json:"vender"`
 	Model         string `json:"model"`
-	// LocalDisk     bool   `json:"localDisk"`
+	LocalDisk     bool   `json:"localDisk"`
+	UUID          string `json:"uuid"`
+	NumOfPath     int    `json:"numOfPath"`
 }
 
 func GetAllHost(c *vim25.Client) []TargetHost {
@@ -81,11 +82,14 @@ func GetHostInfo(host *mo.HostSystem) (TargetHost, error) {
 	// fmt.Println(string(printStr))
 	for _, adapter := range adapters {
 		strAdapter, _ := json.Marshal(adapter)
-		ok := strings.Contains(gjson.Get(string(strAdapter), "Model").String(), "Fibre Channel Adapter")
-		if ok {
-			thost.WWPN = append(thost.WWNN, strconv.FormatInt(gjson.Get(string(strAdapter), "PortWorldWideName").Int(), 16))
+		// ok := strings.Contains(gjson.Get(string(strAdapter), "Model").String(), "Fibre Channel Adapter")
+		// if ok {
+		if gjson.Get(string(strAdapter), "PortWorldWideName").Int() != 0 {
+			thost.WWPN = append(thost.WWPN, strconv.FormatInt(gjson.Get(string(strAdapter), "PortWorldWideName").Int(), 16))
+			fmt.Println(thost.Name, strconv.FormatInt(gjson.Get(string(strAdapter), "PortWorldWideName").Int(), 16))
 			thost.WWNN = append(thost.WWNN, strconv.FormatInt(gjson.Get(string(strAdapter), "NodeWorldWideName").Int(), 16))
 		}
+		// }
 	}
 
 	// 获取主机的ScsiLUNs
@@ -95,7 +99,14 @@ func GetHostInfo(host *mo.HostSystem) (TargetHost, error) {
 		tlun.CanonicalName = lun.GetScsiLun().CanonicalName
 		tlun.Vender = lun.GetScsiLun().Vendor
 		tlun.Model = lun.GetScsiLun().Model
-		// tlun.LocalDisk = lun.GetScsiLun().LocalDisk
+		tlun.UUID = lun.GetScsiLun().Uuid
+
+		for _, LunPath := range host.Config.StorageDevice.MultipathInfo.Lun {
+			if tlun.UUID != LunPath.Id {
+				continue
+			}
+			tlun.NumOfPath = len(LunPath.Path)
+		}
 		thost.ScsiLuns = append(thost.ScsiLuns, tlun)
 	}
 
