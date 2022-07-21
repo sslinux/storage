@@ -19,7 +19,7 @@ type LUN struct {
 	HostModeOptions []int64 `json:"hostModeOptions"`
 }
 
-func (lun *LUN) GetLunNaaID(session Session) (string, error) {
+func (lun *LUN) GetLunNaaID(session *Session) (string, error) {
 	tmpLdev := GetSpecifyLDEV(session, lun.LdevID)
 	lun.NaaID = tmpLdev.NaaId
 	return tmpLdev.NaaId, nil

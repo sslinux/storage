@@ -37,23 +37,30 @@ type LDEV struct {
 	NaaId                   string   `json:"naaId"`
 }
 
-func GetAllLDEVs(session Session) []LDEV {
-	resp, err := session.Request("GET", "/ldevs", nil, nil, nil)
+func GetAllLDEVs(session *Session) []*LDEV {
+	var Parameters = make(map[string]string)
+	Parameters["LdevOption"] = "dpVolume"
+	Parameters["count"] = "2000"
+	resp, err := session.Request("GET", "/ldevs", Parameters, nil, nil)
 	if err != nil {
 		log.Printf("GetAllLDEVs error:%s\n", err)
 	}
 	byteBody, _ := ioutil.ReadAll(resp.Body)
-	var ldevs []LDEV
+	var ldevs []*LDEV
 	for _, item := range gjson.Get(string(byteBody), "data").Array() {
 		tmpLdev := LDEV{}
 		json.Unmarshal([]byte(item.String()), &tmpLdev)
-		ldevs = append(ldevs, tmpLdev)
+		if tmpLdev.BlockCapacity == 0 || tmpLdev.NumOfPorts == 0 {
+			continue
+		}
+		tmpLdev.NaaId = tmpLdev.GetLdevNaaID(session)
+		ldevs = append(ldevs, &tmpLdev)
 	}
 	return ldevs
 }
 
 // 根据LdevId，获取LDEV的naaID；
-func (l *LDEV) GetLdevNaaID(session Session) string {
+func (l *LDEV) GetLdevNaaID(session *Session) string {
 	resp, err := session.Request("GET", "/ldevs/"+fmt.Sprintf("%d", l.LdevID), nil, nil, nil)
 	if err != nil {
 		log.Printf("GetLdevNaaID error:%s\n", err)
@@ -64,7 +71,7 @@ func (l *LDEV) GetLdevNaaID(session Session) string {
 }
 
 // 根据十进制LdevId，获取LDEV的详细信息，包含NaaID；
-func GetSpecifyLDEV(session Session, LdevID int64) LDEV {
+func GetSpecifyLDEV(session *Session, LdevID int64) LDEV {
 	resp, err := session.Request("GET", "/ldevs/"+fmt.Sprintf("%d", LdevID), nil, nil, nil)
 	if err != nil {
 		log.Printf("GetLdevNaaID error:%s\n", err)

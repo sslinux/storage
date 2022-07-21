@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	SCHEMA = "http" // or "http"
+	SCHEMA = "http" // or "https"
 	HOST   = "192.204.1.91"
 	PORT   = 23450 // or 23450
 )
@@ -58,7 +58,9 @@ func GenerateToken(deviceID, username, password string) (string, int64) {
 }
 
 func URL(deviceID string) string {
-	return SCHEMA + "://" + HOST + ":" + fmt.Sprintf("%d", PORT) + "/ConfigurationManager/v1/objects/storages/" + deviceID
+
+	return SCHEMA + "://" + HOST + ":" + fmt.Sprintf("%d", 23450) + "/ConfigurationManager/v1/objects/storages/" + deviceID
+
 }
 
 type Session struct {

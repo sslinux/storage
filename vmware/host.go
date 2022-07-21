@@ -25,6 +25,7 @@ type TargetHost struct {
 	NumOfDatastore int      `json:"numOfDatastore"`
 	VMs            []string `json:"vms"`
 	Datastores     []string `json:"datastores"`
+	ClusterID      string
 }
 
 type ScsiLUN struct {
@@ -57,6 +58,9 @@ func GetAllHost(c *vim25.Client) []TargetHost {
 		if err != nil {
 			log.Printf("GetHostInfo error: %v", err)
 		}
+		if host.Parent.Type == "ClusterComputeResource" {
+			thost.ClusterID = host.Parent.Value
+		}
 		thosts = append(thosts, thost)
 		// fmt.Println(thost)
 	}
@@ -86,7 +90,7 @@ func GetHostInfo(host *mo.HostSystem) (TargetHost, error) {
 		// if ok {
 		if gjson.Get(string(strAdapter), "PortWorldWideName").Int() != 0 {
 			thost.WWPN = append(thost.WWPN, strconv.FormatInt(gjson.Get(string(strAdapter), "PortWorldWideName").Int(), 16))
-			fmt.Println(thost.Name, strconv.FormatInt(gjson.Get(string(strAdapter), "PortWorldWideName").Int(), 16))
+			// fmt.Println(thost.Name, strconv.FormatInt(gjson.Get(string(strAdapter), "PortWorldWideName").Int(), 16))
 			thost.WWNN = append(thost.WWNN, strconv.FormatInt(gjson.Get(string(strAdapter), "NodeWorldWideName").Int(), 16))
 		}
 		// }

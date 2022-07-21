@@ -1,4 +1,4 @@
-module netapp
+module sannav
 
 go 1.18
 

@@ -20,6 +20,7 @@ type TargetVM struct {
 	DataStoreID   string `json:"datastoreID"`
 	HostID        string `json:"hostId"`
 	HostIP        string `json:"hostIP"`
+	StorageSN     string
 }
 
 var AllHostIDMapName map[string]string
@@ -48,6 +49,11 @@ func GetAllVM(c *vim25.Client) []TargetVM {
 	}
 
 	for _, vm := range vms {
+
+		if vm.Parent.Type == "ClusterComputeResource" {
+			fmt.Println("vm.Parent: ", vm.Parent.Value)
+		}
+
 		tvm := TargetVM{}
 		tvm.VMName = vm.Name
 		if ok := strings.HasPrefix(vm.Name, "Volume-") || strings.HasPrefix(vm.Name, "volume-"); ok {

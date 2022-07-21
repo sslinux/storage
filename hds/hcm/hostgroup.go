@@ -156,7 +156,7 @@ func GetAllHostWWNs(session *Session, portID string) ([]HostWWN, error) {
 	Parameters["portId"] = portID
 	resp, err := session.Request("GET", "/host-wwns", Parameters, nil, nil)
 	if err != nil {
-		log.Printf("GetHostWWNs error:%s\n", err)
+		log.Printf("Get port %s HostWWNs error:%s\n", portID, err)
 		return nil, err
 	}
 	byteBody, _ := ioutil.ReadAll(resp.Body)

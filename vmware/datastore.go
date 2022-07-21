@@ -22,6 +22,7 @@ type TargetDatastore struct {
 	NumOfVM      int    `json:"NumOfVM"`
 	Hosts        []string
 	Vms          []string
+	ClusterID    string
 }
 
 func GetAllDatastoreIDMapName(allDatastore []TargetDatastore) map[string]string {
@@ -42,13 +43,15 @@ func GetAllDatastore(c *vim25.Client) []TargetDatastore {
 	defer v.Destroy(ctx)
 
 	var stores []mo.Datastore
-	err = v.Retrieve(ctx, kind, []string{"summary", "name", "info", "host", "vm"}, &stores)
+	err = v.Retrieve(ctx, kind, []string{"parent", "summary", "name", "info", "host", "vm"}, &stores)
 	if err != nil {
 		fmt.Println(err)
 	}
 
 	var allDatastores []TargetDatastore
 	for _, store := range stores {
+		fmt.Println("datastore parent: ", store.Parent.Type, store.Parent.Value) // temp print
+
 		targetDatastore := TargetDatastore{}
 		targetDatastore.Datastore_ID = store.Self.Value
 		targetDatastore.Name = store.Name
@@ -64,11 +67,9 @@ func GetAllDatastore(c *vim25.Client) []TargetDatastore {
 			targetDatastore.DiskName = gjson.Get(tmpStr, "DiskName").String()
 		}
 
-		// fmt.Println(string(byteInfo))
-		// NaaID := gjson.Get(string(byteInfo), "Vmfs.Extent").String()
-		// fmt.Println(store.Self.Value, store.Name, NaaID)
-		// byteprint, _ := json.Marshal(store.Info)
-		// fmt.Println(string(byteprint))
+		if store.Parent.Type == "ClusterComputeResource" {
+			targetDatastore.ClusterID = store.Parent.Value
+		}
 
 		for _, h := range store.Host {
 			targetDatastore.Hosts = append(targetDatastore.Hosts, h.Key.Value)
